@@ -11,9 +11,16 @@ if ! command -v lpass &> /dev/null; then
 	exit 1
 fi
 
-if ! command -v wl-copy &> /dev/null; then
-	echo "wl-clipboard not installed"
-	exit 1
+if [ $SYSTEM_TYPE = "Darwin" ]; then
+	if ! command -v pbcopy &> /dev/null; then
+		echo "pbcopy not installed"
+		exit 1
+	fi
+else
+	if ! command -v wl-copy &> /dev/null; then
+		echo "wl-clipboard not installed"
+		exit 1
+	fi
 fi
 
 if ! openvpn_isrunning; then
