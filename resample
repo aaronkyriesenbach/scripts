@@ -1,20 +1,22 @@
 #!/bin/zsh
 
+set -e
+
 # Resamples all flac files in current directory to 16-bit 44.1 kHz
 if ! command -v sox &> /dev/null; then
 	echo "sox is not installed"
 	exit 1
 fi
 
-if [ $(find -maxdepth 1 -type f -name "*.flac" | wc -l) = 0 ]; then
-	echo "no .flac files in current directory"
+find_options='-maxdepth 1 -type f \( -name "*.flac" -or -name "*.wav" \)'
+if [ $(find -maxdepth 1 -type f \( -name "*.flac" -or -name "*.wav" \) | wc -l) = 0 ]; then
+	echo "no .flac or .wav files in current directory"
 	exit 1
 fi
 
 mkdir resampled
-for flac in *.flac; do
-	sox -S "${flac}" -r 44100 -b 16 ./resampled/"${flac}"
-done
-rm *.flac
+find -maxdepth 1 -type f \( -name "*.flac" -or -name "*.wav" \) -exec sox -S {} -r 44100 -b 16 ./resampled/"$(basename {} | cut -d'.' -f1).flac" \;
+
+find -maxdepth 1 -type f \( -name "*.flac" -or -name "*.wav" \) -exec rm {} \;
 mv resampled/* .
 rm -r resampled
