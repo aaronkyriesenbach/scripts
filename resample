@@ -8,14 +8,13 @@ if ! command -v sox &> /dev/null; then
 	exit 1
 fi
 
-find_options='-maxdepth 1 -type f \( -name "*.flac" -or -name "*.wav" \)'
 if [ $(find -maxdepth 1 -type f \( -name "*.flac" -or -name "*.wav" \) | wc -l) = 0 ]; then
 	echo "no .flac or .wav files in current directory"
 	exit 1
 fi
 
 mkdir resampled
-find -maxdepth 1 -type f \( -name "*.flac" -or -name "*.wav" \) -exec sox -S {} -r 44100 -b 16 ./resampled/"$(basename {} | cut -d'.' -f1).flac" \;
+find -maxdepth 1 -type f \( -name "*.flac" -or -name "*.wav" \) -exec zsh -c 'sox -S $1 -r 44100 -b 16 resampled/"$(basename $1 | sed "s/.*\///g" | sed "s/\.[^.]*$//").flac"' zsh {} \;
 
 find -maxdepth 1 -type f \( -name "*.flac" -or -name "*.wav" \) -exec rm {} \;
 mv resampled/* .
