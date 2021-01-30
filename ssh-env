@@ -28,12 +28,16 @@ if ! openvpn_isrunning; then
 	exit 1
 fi
 
-env=$1-$2
+env=$1
 
 password=$(lpass show --password $env) || {
 	echo "No LastPass entry found for env $env"
 	exit 1
 }
-wl-copy $password
-echo "Copied password for environment $env to clipboard"
+if ! command -v pbcopy &> /dev/null; then
+	wl-copy $password
+else
+	pbcopy $password
+fi
+echo "Copied sudo password for environment $env to clipboard"
 ssh $(lpass show --username $env)@$(lpass show --url $env | cut -f3 -d/)
