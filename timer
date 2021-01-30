@@ -1,0 +1,65 @@
+#!/bin/zsh
+
+tput civis
+trap "tput cnorm; kill $$" SIGINT
+
+display_remaining () {
+	s=$1
+
+	if [ $s -gt 3599 ]; then
+		h=$(( $s / 3600 ))
+		s=$(( $s - $h * 3600 ))
+		m=$(( $s / 60 ))
+		s=$(( $s - $m * 60 ))
+	elif [ $s -gt 59 ]; then
+		h=0
+		m=$(( $s / 60 ))
+		s=$(( $s - $m * 60 ))
+	else
+		h=0
+		m=0
+	fi
+
+	if [ $h -gt 0 ]; then
+		[ $h -gt 9 ] && h_disp=$h || h_disp="0$h"
+		[ $m -gt 9 ] && m_disp=$m || m_disp="0$m"
+		[ $s -gt 9 ] && s_disp=$s || s_disp="0$s"
+		echo -ne "\033[2K$h_disp:$m_disp:$s_disp\r"
+	else
+		[ $m -gt 9 ] && m_disp=$m || m_disp="0$m"
+		[ $s -gt 9 ] && s_disp=$s || s_disp="0$s"
+		echo -ne "\033[2K$m_disp:$s_disp\r"
+	fi
+}
+
+if ! [[ $1 =~ "^[0-9]+$" ]]; then
+	echo "Invalid duration"
+	return 1
+fi
+
+case $2 in
+	s | sec | secs | seconds)
+		multiplier=1
+		;;
+	m | min | mins | minutes)
+		multiplier=60
+		;;
+	h | hr | hrs | hour | hours)
+		multiplier=3600
+		;;
+	*)
+		echo "Invalid unit provided, defaulting to seconds"
+		multiplier=1
+		;;
+esac
+
+secs=$(( $1 * $multiplier ))
+
+while [ $secs -ge 0 ]; do
+	display_remaining $secs
+	command sleep 1
+	secs=$(( $secs - 1 ))
+done
+while true; do
+	paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga
+done
