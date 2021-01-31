@@ -1,20 +1,20 @@
 #!/bin/zsh
 
 tput civis
-trap "tput cnorm; kill $$" SIGINT
+trap 'tput cnorm; kill $$' SIGINT
 
 display_remaining () {
 	s=$1
 
-	if [ $s -gt 3599 ]; then
-		h=$(( $s / 3600 ))
-		s=$(( $s - $h * 3600 ))
-		m=$(( $s / 60 ))
-		s=$(( $s - $m * 60 ))
+	if [ "$s" -gt 3599 ]; then
+		h=$(( s / 3600 ))
+		s=$(( s - h * 3600 ))
+		m=$(( s / 60 ))
+		s=$(( s - m * 60 ))
 	elif [ $s -gt 59 ]; then
 		h=0
-		m=$(( $s / 60 ))
-		s=$(( $s - $m * 60 ))
+		m=$(( s / 60 ))
+		s=$(( s - m * 60 ))
 	else
 		h=0
 		m=0
@@ -32,9 +32,9 @@ display_remaining () {
 	fi
 }
 
-if ! [[ $1 =~ "^[0-9]+$" ]]; then
+if ! [[ $1 =~ ^[0-9]+$ ]]; then
 	echo "Invalid duration"
-	return 1
+	exit 1
 fi
 
 case $2 in
@@ -53,12 +53,12 @@ case $2 in
 		;;
 esac
 
-secs=$(( $1 * $multiplier ))
+secs=$(( $1 * multiplier ))
 
 while [ $secs -ge 0 ]; do
 	display_remaining $secs
 	command sleep 1
-	secs=$(( $secs - 1 ))
+	secs=$(( secs - 1 ))
 done
 while true; do
 	if [[ "$SYSTEM_TYPE" -eq "Darwin" ]]; then

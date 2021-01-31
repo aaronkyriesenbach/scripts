@@ -11,7 +11,7 @@ if ! command -v lpass &> /dev/null; then
 	exit 1
 fi
 
-if [ $SYSTEM_TYPE = "Darwin" ]; then
+if [ "$SYSTEM_TYPE" = "Darwin" ]; then
 	if ! command -v pbcopy &> /dev/null; then
 		echo "pbcopy not installed"
 		exit 1
@@ -30,14 +30,14 @@ fi
 
 env=$1
 
-password=$(lpass show --password $env) || {
+password=$(lpass show --password "$env") || {
 	echo "No LastPass entry found for env $env"
 	exit 1
 }
 if ! command -v pbcopy &> /dev/null; then
-	wl-copy $password
+	wl-copy "$password"
 else
-	pbcopy $password
+	pbcopy "$password"
 fi
 echo "Copied sudo password for environment $env to clipboard"
-ssh $(lpass show --username $env)@$(lpass show --url $env | cut -f3 -d/)
+ssh "$(lpass show --username "$env")"@"$(lpass show --url "$env" | cut -f3 -d/)"
