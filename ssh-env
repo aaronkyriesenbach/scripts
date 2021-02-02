@@ -1,11 +1,6 @@
 #!/bin/zsh
 
 # SSH into environment and copy password to clipboard w/ lastpass-cli
-openvpn_isrunning() {
-	connection=$(pgrep -a openvpn$ | head -n 1 | awk '{print $NF}' | cut -d '.' -f 1)
-	return $(test -n "$connection")
-}
-
 if ! command -v lpass &> /dev/null; then
 	echo "lastpass-cli not installed"
 	exit 1
@@ -16,28 +11,32 @@ if [ "$SYSTEM_TYPE" = "Darwin" ]; then
 		echo "pbcopy not installed"
 		exit 1
 	fi
+	copy_command=pbcopy
 else
 	if ! command -v wl-copy &> /dev/null; then
 		echo "wl-clipboard not installed"
 		exit 1
 	fi
-fi
-
-if ! openvpn_isrunning; then
-	echo "VPN isn't running"
-	exit 1
+	copy_command=wl-copy
 fi
 
 env=$1
 
-password=$(lpass show --password "$env") || {
-	echo "No LastPass entry found for env $env"
+lpass show "$env" &> /dev/null || {
+	echo "No LastPass entry for $env"
 	exit 1
 }
-if ! command -v pbcopy &> /dev/null; then
-	wl-copy "$password"
-else
-	pbcopy "$password"
-fi
+
+url=$(lpass show --url "$env" | cut -f3 -d/)
+
+ping $url -c 1 &> /dev/null || {
+	echo "Unable to reach target server. Does a VPN need to be connected?"
+	exit 1
+}
+
+user=$(lpass show --username "$env")
+password=$(lpass show --password "$env")
+
+echo "$password" | $copy_command
 echo "Copied sudo password for environment $env to clipboard"
-ssh "$(lpass show --username "$env")"@"$(lpass show --url "$env" | cut -f3 -d/)"
+ssh "$user"@"$url"

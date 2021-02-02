@@ -1,21 +1,20 @@
 #!/bin/zsh
 
 # SSH into environment and copy password to clipboard w/ lastpass-cli
-openvpn_isrunning() {
-	connection=$(pgrep -a openvpn$ | head -n 1 | awk '{print $NF}' | cut -d '.' -f 1)
-	return $(test -n "$connection")
-}
-
 if ! command -v lpass &> /dev/null; then
 	echo "lastpass-cli not installed"
 	exit 1
 fi
 
-if ! openvpn_isrunning; then
-	echo "VPN isn't running"
-	exit 1
-fi
-
 env=$1-mysql
 
-mysql -h $(lpass show --url $env | cut -f3 -d/) -u $(lpass show --username $env) -p$(lpass show --password $env)
+lpass show "$env" &> /dev/null || {
+	echo "No LastPass entry for $env"
+	exit 1
+}
+
+url=$(lpass show --url "$env" | cut -f3 -d/)
+user=$(lpass show --username "$env")
+password=$(lpass show --password "$env")
+
+mysql -h "$url" -u "$user" -p"$password"
