@@ -61,7 +61,7 @@ while [ $secs -ge 0 ]; do
 	secs=$(( secs - 1 ))
 done
 while true; do
-	if [[ "$SYSTEM_TYPE" -eq "Darwin" ]]; then
+	if [[ "$SYSTEM_TYPE" = "Darwin" ]]; then
 		afplay /System/Library/Sounds/Funk.aiff
 	else
 		paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga
