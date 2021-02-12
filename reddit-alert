@@ -21,11 +21,11 @@ def get_list_from_config(config, key):
 
 
 def get_recent_index(posts, recents, sub):
-    try:
+    if sub in recents:
         for i in range(len(posts)):
             if posts[i]["id"] == recents[sub]["recent"]:
                 return i
-    except KeyError:
+    else:
         recents[sub] = {}
         return len(posts)
 
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     recents = configparser.ConfigParser()
     config.read(f"{os.getenv('HOME')}/.config/reddit-alert.ini")
-    config.read(f"{os.getenv('HOME')}/.cache/reddit-alert-recent.ini")
+    recents.read(f"{os.getenv('HOME')}/.cache/reddit-alert-recent.ini")
     for sub in (sub for sub in config if sub != "DEFAULT"):
         search = {"exact": get_list_from_config(config[sub], "exact"),
                   "fuzzy": get_list_from_config(config[sub], "fuzzy"),
@@ -43,9 +43,10 @@ if __name__ == "__main__":
         posts = [post['data'] for post in resp['data']['children']]
 
         posts = posts[0:get_recent_index(posts, recents, sub)]
-        recents[sub]["recent"] = posts[0]["id"]
-        with open(f"{os.getenv('HOME')}/.cache/reddit-alert-recent.ini", "w") as recents_file:
-            recents.write(recents_file)
+        if len(posts) > 0:
+            recents[sub]["recent"] = posts[0]["id"]
+            with open(f"{os.getenv('HOME')}/.cache/reddit-alert-recent.ini", "w") as recents_file:
+                recents.write(recents_file)
 
         for post in posts:
             for term in (search["exact"] or []):
@@ -55,7 +56,7 @@ if __name__ == "__main__":
                     push_notify(message, post["url"])
 
             for term in (search["fuzzy"] or []):
-                if term.toLower() in post["selftext"].toLower() or term.toLower() in post["title"].toLower():
+                if term.lower() in post["selftext"].lower() or term.lower() in post["title"].lower():
                     message = f"New post on /r/{post['subreddit']} matching fuzzy term {term}"
                     print(message)
                     push_notify(f"New post on /r/{post['subreddit']} matching fuzzy term {term}", post["url"])
