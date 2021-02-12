@@ -17,7 +17,7 @@ def push_notify(title, message):
 
 
 def get_list_from_config(config, key):
-    return json.loads(config[key]) if config.get(key, None) is not None else None
+    return json.loads(config[key]) if key in config else None
 
 
 def get_recent_index(posts, recents, sub):
@@ -55,7 +55,7 @@ if __name__ == "__main__":
                     push_notify(message, post["url"])
 
             for term in (search["fuzzy"] or []):
-                if term.toLower() in post["selftext"].toLower() or term in post["title"].toLower():
+                if term.toLower() in post["selftext"].toLower() or term.toLower() in post["title"].toLower():
                     message = f"New post on /r/{post['subreddit']} matching fuzzy term {term}"
                     print(message)
                     push_notify(f"New post on /r/{post['subreddit']} matching fuzzy term {term}", post["url"])
