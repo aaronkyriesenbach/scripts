@@ -8,6 +8,15 @@ import re
 import requests
 
 
+def wait_for_internet():
+    while True:
+        try:
+            requests.get("https://google.com", timeout=1)
+            return
+        except urllib3.exceptions.MaxRetryError:
+            pass
+
+
 def push_notify(title, message):
     payload = {"token": os.getenv("PUSHOVER_API_TOKEN"),
                "user": os.getenv("PUSHOVER_USER_KEY"),
@@ -31,6 +40,8 @@ def get_recent_index(posts, recents, sub):
 
 
 if __name__ == "__main__":
+    wait_for_internet()
+
     config = configparser.ConfigParser()
     recents = configparser.ConfigParser()
     config.read(f"{os.getenv('HOME')}/.config/reddit-alert.ini")

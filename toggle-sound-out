@@ -8,4 +8,4 @@ grep -q "$output_0" $asoundrc && sed -i "s/$output_0/$output_1/" $asoundrc || se
 
 alsactl kill rescan
 
-pgrep spotify 1> /dev/null && killall -9 spotify && swaymsg "workspace 1; exec spotify"
+pgrep spotify 1> /dev/null && killall -9 spotify && swaymsg "workspace 1; exec spotify" || exit 0
