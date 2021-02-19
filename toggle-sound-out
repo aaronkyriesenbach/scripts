@@ -7,5 +7,3 @@ output_1="hw:PCH,0"
 grep -q "$output_0" $asoundrc && sed -i "s/$output_0/$output_1/" $asoundrc || sed -i "s/$output_1/$output_0/" $asoundrc
 
 alsactl kill rescan
-
-pgrep spotify 1> /dev/null && killall -9 spotify && swaymsg "workspace 1; exec spotify" || exit 0
