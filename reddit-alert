@@ -31,6 +31,7 @@ def get_list_from_config(config, key):
 
 def get_recent_index(posts, recents, sub):
     if sub in recents:
+        print(f"Most recent post from {sub} is {recents[sub]['recent']}")
         for i in range(len(posts)):
             if posts[i]["id"] == recents[sub]["recent"]:
                 return i
