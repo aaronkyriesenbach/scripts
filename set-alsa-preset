@@ -1,0 +1,17 @@
+#!/bin/zsh 
+
+PRESET_FOLDER=$HOME/.config/alsa_presets
+
+presets=($PRESET_FOLDER/*)
+for i in {1..${#presets[@]}}; do
+	presets[$i]=$(basename $presets[$i])
+done
+
+PS3="Choose a preset: "
+select preset in $presets; do
+	break
+done
+
+ln -sf $PRESET_FOLDER/$preset $HOME/.asoundrc
+
+alsactl kill rescan

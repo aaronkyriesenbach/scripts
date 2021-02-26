@@ -1,9 +1,0 @@
-#!/bin/zsh
-
-asoundrc=$HOME/.asoundrc
-output_0="iec958:CARD=S3,DEV=0"
-output_1="hw:PCH,0"
-
-grep -q "$output_0" $asoundrc && sed -i "s/$output_0/$output_1/" $asoundrc || sed -i "s/$output_1/$output_0/" $asoundrc
-
-alsactl kill rescan
