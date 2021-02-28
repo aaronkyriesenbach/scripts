@@ -1,10 +1,9 @@
 #!/bin/zsh
 
+source "utils/ensure_installed.sh"
+
 # SSH into environment and copy password to clipboard w/ lastpass-cli
-if ! command -v lpass &> /dev/null; then
-	echo "lastpass-cli not installed"
-	exit 1
-fi
+ensure_installed lpass
 
 env=$1-mysql
 

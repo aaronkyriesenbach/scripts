@@ -2,11 +2,10 @@
 
 set -e
 
+source "utils/ensure_installed.sh"
+
 # Resamples all flac files in current directory to 16-bit 44.1 kHz
-if ! command -v sox &> /dev/null; then
-	echo "sox is not installed"
-	exit 1
-fi
+ensure_installed sox
 
 if [ $(find -maxdepth 1 -type f \( -name "*.flac" -or -name "*.wav" \) | wc -l) = 0 ]; then
 	echo "no .flac or .wav files in current directory"
