@@ -1,6 +1,7 @@
 #!/bin/zsh
 
-source "utils/ensure_installed.sh"
+source "$HOME/scripts/utils/ensure_installed.sh"
+source "$HOME/scripts/utils/ensure_reachable.sh"
 
 # SSH into environment and copy password to clipboard w/ lastpass-cli
 ensure_installed lpass
@@ -22,10 +23,7 @@ lpass show "$env" &> /dev/null || {
 
 url=$(lpass show --url "$env" | cut -f3 -d/)
 
-ping $url -c 1 &> /dev/null || {
-	echo "Unable to reach target server. Does a VPN need to be connected?"
-	exit 1
-}
+ensure_reachable $url
 
 user=$(lpass show --username "$env")
 password=$(lpass show --password "$env")

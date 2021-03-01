@@ -2,7 +2,7 @@
 
 set -e
 
-source "utils/ensure_installed.sh"
+source "$HOME/scripts/utils/ensure_installed.sh"
 
 # Resamples all flac files in current directory to 16-bit 44.1 kHz
 ensure_installed sox
