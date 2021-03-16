@@ -1,20 +1,117 @@
-#!/bin/zsh
+#!/usr/bin/python
 
-set -e
+import argparse
+from glob import glob
+import os
+from pathlib import Path
+from shutil import which
 
-source "$HOME/scripts/utils/ensure_installed.sh"
+accepted_extensions = ["flac", "wav", "m4a"]
+target_formats = {
+    # codec: extension
+    "flac": "flac",
+    "alac": "m4a"
+}
 
-# Resamples all flac files in current directory to 16-bit 44.1 kHz
-ensure_installed sox
 
-if [ $(find -maxdepth 1 -type f \( -name "*.flac" -or -name "*.wav" \) | wc -l) = 0 ]; then
-	echo "no .flac or .wav files in current directory"
-	exit 1
-fi
+def throw_error(error):
+    print(error)
+    exit(1)
 
-mkdir resampled
-find -maxdepth 1 -type f \( -name "*.flac" -or -name "*.wav" \) -exec zsh -c 'sox -S $1 -r 44100 -b 16 resampled/"$(basename $1 | sed "s/.*\///g" | sed "s/\.[^.]*$//").flac"' zsh {} \;
 
-find -maxdepth 1 -type f \( -name "*.flac" -or -name "*.wav" \) -exec rm {} \;
-mv resampled/* .
-rm -r resampled
+def get_command(source_file, target_codec, dest_file):
+    args = [
+        "ffmpeg",
+        "-hide_banner",
+        f"-i \"{source_file}\"",
+        f"-acodec {target_codec}",
+        "-vcodec copy",
+        "-map_metadata 0",
+        f"-sample_fmt s16{'p' if target_codec == 'alac' else ''}",
+        "-ar 44100",
+        f"\"{dest_file}\""
+    ]
+
+    return " ".join(args)
+
+
+def resample(source_file: Path, target_codec):
+    name = source_file.name
+    basename = name[:name.rindex(".")]
+    temp = f"{source_file.parent}/{basename}_resampled.{target_formats.get(target_codec)}"
+
+    cmd = get_command(source_file, target_codec, temp)
+    print(cmd)
+    if os.system(cmd) != 0:
+        throw_error(f"Failed to resample \"{name}\" to FLAC")
+
+    return temp
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    # parser.add_argument("-i", "--input", help="designate a file or directory to resample")
+    parser.add_argument("input", help="designate a file or directory to resample")
+    parser.add_argument("-f", "--format", help="designate a container/codec to resample to")
+    parser.add_argument("-d", "--delete", help="delete source files after resampling",
+                        action='store_true')
+    parser.add_argument("--delete-existing", help="delete existing resampled files",
+                        action='store_true')
+
+    args = parser.parse_args()
+    input = Path(args.input) if args.input else Path(os.getcwd())
+    target_codec = args.format.lower() if args.format else "flac"
+    delete = args.delete
+
+    if args.delete_existing:
+        files = []
+        for ext in target_formats.values():
+            files.extend([Path(file) for file in glob(os.path.join(input, f"**/*_resampled.{ext}"), recursive=True)])
+
+        if files:
+            for file in files:
+                os.remove(file)
+                print(f"Removed {file}")
+            exit(0)
+        else:
+            throw_error("No resampled files in target directory")
+
+    if which("sox") is None or which("ffmpeg") is None:
+        throw_error("Please ensure that SoX and FFmpeg are installed")
+
+    if not os.path.exists(input):
+        throw_error(f"Target \"{input}\" doesn't exist")
+
+    if target_codec not in target_formats:
+        throw_error(f"Can't resample to format \"{target_codec}\"")
+
+    files = []
+    resampled_files = []
+    if os.path.isfile(input):
+        file = str(input)
+        ext = file[file.rindex(".") + 1:]
+        # Won't work for multi-part extensions, i.e. .tar.gz. This is OK because none of the supported audio files
+        # have multi-part extensions.
+        if ext in accepted_extensions:
+            files.append(input)
+            resampled_files.append(resample(input, target_codec))
+        else:
+            throw_error(f"File extension \"{ext}\" is not supported")
+    else:
+        for ext in accepted_extensions:
+            files.extend([Path(file) for file in glob(os.path.join(input, f"**/*.{ext}"), recursive=True)])
+
+        if files:
+            for file in files:
+                resampled_files.append(resample(file, target_codec))
+        else:
+            throw_error("No supported files in this directory or its subdirectories")
+
+    if delete:
+        for i in range(len(files)):
+            name = files[i].name
+            basename = name[:name.rindex(".")]
+
+            os.remove(files[i])
+            os.rename(resampled_files[i], f"{files[i].parent}/{basename}.{target_formats.get(target_codec)}")
