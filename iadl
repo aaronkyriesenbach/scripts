@@ -25,52 +25,71 @@ def throw_error(message: str):
     exit(1)
 
 
+def throw_with_cleanup(message: str, dir_to_remove):
+    print(message)
+    if os.path.exists(dir_to_remove) and not os.listdir(dir_to_remove):
+        os.rmdir(dir_to_remove)
+    exit(1)
+
+
 def combine_list(items: list) -> str:
     return ", ".join(items)
 
 
 def download_file(file: File, output: str) -> bool:
-    with requests.get(file.url, stream=True) as dl:
-        if dl.status_code == 200:
-            total_size = int(dl.headers.get("content-length"))
-            with open(output, "wb") as out_file:
-                with tqdm(total=total_size, unit="B", unit_scale=True, initial=0, ascii=True) as progress:
-                    for chunk in dl.iter_content(chunk_size=1024):
-                        if chunk:
-                            out_file.write(chunk)
-                            progress.update(len(chunk))
-            downloaded_md5 = hashlib.md5(open(output, "rb").read()).hexdigest()
-            if file.md5 != downloaded_md5:
-                print(f"Downloaded file MD5 {downloaded_md5} does not match expected value {file.md5}")
-                return False
+    print(f"Downloading {file.ia_file_name} as {file.name}")
+
+    attempts = 0
+    while attempts < 3:
+        with requests.get(file.url, stream=True) as dl:
+            if dl.status_code == 200:
+                total_size = int(dl.headers.get("content-length"))
+                with open(output, "wb") as out_file:
+                    with tqdm(total=total_size, unit="B", unit_scale=True, initial=0, ascii=True) as progress:
+                        for chunk in dl.iter_content(chunk_size=1024):
+                            if chunk:
+                                out_file.write(chunk)
+                                progress.update(len(chunk))
+                downloaded_md5 = hashlib.md5(open(output, "rb").read()).hexdigest()
+                if file.md5 != downloaded_md5:
+                    print(f"Downloaded file MD5 {downloaded_md5} does not match expected value {file.md5}"
+                          f"{', retrying...' if attempts < 3 else ''}")
+                    os.remove(output)
+                    attempts += 1
+                else:
+                    return True
             else:
-                return True
-        else:
-            return False
+                print(f"Failed to download {file.ia_file_name} as {file.name}"
+                      f"{', retrying...' if attempts < 3 else ''}")
+                attempts += 1
+    print(f"Failed to download {file.ia_file_name} as {file.name}")
+    return False
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("url", help="enter a URL to retrieve")
-    parser.add_argument("-o", "--output", help="directory to download files to")
-    parser.add_argument("-f", "--format", help="format to save files as")
-    parser.add_argument("-r", "--retry", help="retry download as mp3 if FLAC download fails", action="store_true")
+    parser.add_argument("-o", "--output", help="directory to download files to (default: current directory)")
+    parser.add_argument("-f", "--format", help="format to save files as (default: flac)")
+    parser.add_argument("-r", "--retry",
+                        help="retry download as mp3 if download of specified format fails (default: false)",
+                        action="store_true")
 
     args = parser.parse_args()
     url = args.url
     target_dir = Path(args.output) if args.output else Path(os.getcwd())
-    format = "flac"
+    format = SupportedFormats.FLAC
     retry = args.retry
 
     if args.format in SupportedFormats.values():
-        format = args.format
+        format = SupportedFormats(args.format)
     elif args.format is not None:
         throw_error("Invalid format specified")
 
     if not re.search("https?://archive.org/.*", url):
         throw_error("Invalid archive.org URL")
-        
+
     if not os.path.exists(target_dir):
         throw_error("Output directory does not exist")
 
@@ -84,20 +103,52 @@ if __name__ == "__main__":
     location = combine_list(metadata.get("coverage"))
     venue = combine_list(metadata.get("venue"))
     date = combine_list(metadata.get("date"))
-    
+
     output_dir = Path(f"{target_dir}/{date} - {artist} - {venue}, {location}")
     output_dir.mkdir(parents=True, exist_ok=True)
     print(f"Saving to {output_dir}")
 
     all_files = page.get("files")
+    base_file_names = list(set(map(lambda f: f[:f.rindex(".")], all_files)))
+    base_file_names.sort()
+
     files = []
-    for file in list(all_files):
-        files.append(File(base_url + file, all_files.get(file)))
-    
-    files = filter(lambda file: re.search(f"\\.{format}$", file.ia_file_name) is not None, files)
+    for file_name in base_file_names:
+        file = {}
+        for f in SupportedFormats:
+            full_file_name = f"{file_name}.{f.value}"
+            if full_file_name in all_files:
+                file[f] = File(base_url + full_file_name, all_files[full_file_name])
 
-    for file in files:
-        print(f"Downloading {file.ia_file_name} as {file.name}")
+        if file:
+            files.append(file)
 
-        if not download_file(file, f"{output_dir}/{file.name}"):
-            print(f"Failed to download {file.ia_file_name} as {file.name}")
+    if files:
+        for file in files:
+            if format in file.keys():
+                if not download_file(file.get(format), f"{output_dir}/{file.get(format).name}"):
+                    if SupportedFormats.FLAC == format and retry and SupportedFormats.MP3 in file.keys():
+                        print(f"Falling back to MP3 for file {file.get(SupportedFormats.MP3).name}")
+                        if not (download_file(file.get(SupportedFormats.MP3),
+                                              f"{output_dir}/{file.get(SupportedFormats.MP3).name}")):
+                            print(
+                                f"Failed to download file {file.get(SupportedFormats.MP3).name}"
+                                f" in {SupportedFormats.MP3.value}")
+                    else:
+                        print(f"Failed to download file {file.get(format).name}")
+            else:
+                if retry and SupportedFormats.MP3 in file.keys():
+                    print(f"Falling back to MP3 for file {file.get(SupportedFormats.MP3).name}")
+                    if not (download_file(file.get(SupportedFormats.MP3),
+                                          f"{output_dir}/{file.get(SupportedFormats.MP3).name}")):
+                        print(
+                            f"Failed to download file {file.get(SupportedFormats.MP3).name}"
+                            f"in {SupportedFormats.MP3.value}")
+                else:
+                    print(f"Failed to download file {file.get(SupportedFormats.MP3).base_name}.{format.value}"
+                          f"{', no MP3 to fall back to' if SupportedFormats.MP3 not in file.keys() else ''}")
+    else:
+        throw_with_cleanup(f"No files in {format} format found!", output_dir)
+
+    if os.path.exists(output_dir) and not os.listdir(output_dir):
+        os.rmdir(output_dir)
