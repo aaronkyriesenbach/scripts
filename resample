@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import argparse
-from glob import glob
+from glob import glob, escape
 import os
 from pathlib import Path
 from shutil import which
@@ -60,7 +60,7 @@ if __name__ == "__main__":
                         action='store_true')
 
     args = parser.parse_args()
-    input = Path(args.input) if args.input else Path(os.getcwd())
+    input = escape(Path(args.input)) if args.input else escape(Path(os.getcwd()))
     target_codec = args.format.lower() if args.format else "flac"
     delete = args.delete
 
