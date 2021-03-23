@@ -39,23 +39,24 @@ def combine_list(items: list) -> str:
 
 def download_file(file: File, ext: str, output: str) -> bool:
     print(f"Downloading {file.ia_base_name}.{ext} as {file.get_base_name()}.{ext}")
+    out_file_name = f"{output}.{ext}"
 
     attempts = 0
     while attempts < 1:
         with requests.get(f"{file.url}.{ext}", stream=True) as dl:
             if dl.status_code == 200:
                 total_size = int(dl.headers.get("content-length"))
-                with open(f"{output}.{ext}", "wb") as out_file:
+                with open(out_file_name, "wb") as out_file:
                     with tqdm(total=total_size, unit="B", unit_scale=True, initial=0, ascii=True) as progress:
                         for chunk in dl.iter_content(chunk_size=1024):
                             if chunk:
                                 out_file.write(chunk)
                                 progress.update(len(chunk))
-                downloaded_md5 = hashlib.md5(open(output, "rb").read()).hexdigest()
+                downloaded_md5 = hashlib.md5(open(out_file_name, "rb").read()).hexdigest()
                 if file.md5 != downloaded_md5:
                     print(f"Downloaded file MD5 {downloaded_md5} does not match expected value {file.md5}"
                           f"{', retrying...' if attempts < 3 else ''}")
-                    os.remove(output)
+                    os.remove(out_file_name)
                     attempts += 1
                 else:
                     return True

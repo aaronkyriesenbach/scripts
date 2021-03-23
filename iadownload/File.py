@@ -15,7 +15,7 @@ class File:
         return str(self.track_num).zfill(2) if self.track_num else self.track_num
 
     def get_title(self):
-        return self.metadata.get("title").replace("/", "") if self.metadata.get(
+        return self.metadata.get("title").replace("/", "_") if self.metadata.get(
             "title") else f"Track {self.get_track_num()}"
     
     def get_base_name(self):
