@@ -41,11 +41,11 @@ def download_file(file: File, ext: str, output: str) -> bool:
     print(f"Downloading {file.ia_base_name}.{ext} as {file.get_base_name()}.{ext}")
 
     attempts = 0
-    while attempts < 3:
+    while attempts < 1:
         with requests.get(f"{file.url}.{ext}", stream=True) as dl:
             if dl.status_code == 200:
                 total_size = int(dl.headers.get("content-length"))
-                with open(output, "wb") as out_file:
+                with open(f"{output}.{ext}", "wb") as out_file:
                     with tqdm(total=total_size, unit="B", unit_scale=True, initial=0, ascii=True) as progress:
                         for chunk in dl.iter_content(chunk_size=1024):
                             if chunk:
@@ -162,4 +162,6 @@ if __name__ == "__main__":
         throw_with_cleanup(f"No files in {format} format found!", output_dir)
 
     if os.path.exists(output_dir) and not os.listdir(output_dir):
+        if files:
+            throw_with_cleanup("Failed to download all files!", output_dir)
         os.rmdir(output_dir)
