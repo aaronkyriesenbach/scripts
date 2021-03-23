@@ -5,6 +5,7 @@ import re
 import os
 from tqdm import tqdm
 import argparse
+from glob import escape
 import requests
 from iadownload.File import File
 import hashlib
@@ -33,7 +34,7 @@ def throw_with_cleanup(message: str, dir_to_remove):
 
 
 def combine_list(items: list) -> str:
-    return ", ".join(items)
+    return ", ".join(items) if hasattr(items, '__iter__') else items
 
 
 def download_file(file: File, output: str) -> bool:
@@ -78,8 +79,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     url = args.url
-    target_dir = Path(args.output) if args.output else Path(os.getcwd())
-    format = SupportedFormats.FLAC
+    target_dir = escape(Path(args.output)) if args.output else escape(Path(os.getcwd()))
+    format = SupportedFormats.MP3
     retry = args.retry
 
     if args.format in SupportedFormats.values():
@@ -109,7 +110,11 @@ if __name__ == "__main__":
     print(f"Saving to {output_dir}")
 
     all_files = page.get("files")
-    base_file_names = list(set(map(lambda f: f[:f.rindex(".")], all_files)))
+    
+    def get_base_names(file):
+        return file[:file.rindex(".")] if "." in file else None
+    
+    base_file_names = list(set([file for file in map(get_base_names, all_files) if file is not None]))
     base_file_names.sort()
 
     files = []

@@ -6,7 +6,7 @@ class File:
         
         self.extension = self.ia_file_name[self.ia_file_name.rindex(".") + 1:]
         self.track_num = metadata.get("track")
-        self.title = metadata.get("title")
+        self.title = metadata.get("title").replace("/", "") if metadata.get("title") else f"Track {self.track_num}"
         
         self.base_name = f"{self.track_num} - {self.title}"
         self.name = f"{self.base_name}.{self.extension}"
