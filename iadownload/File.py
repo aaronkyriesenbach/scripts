@@ -1,15 +1,22 @@
 class File:
-    def __init__(self, url, metadata):
+    def __init__(self, url, metadata, supported_extensions):
+        self.metadata = metadata
         self.url = url
-        self.ia_file_name = url[url.rindex("/") + 1:]
+        self.ia_base_name = url[url.rindex("/"):]
         self.md5 = metadata.get("md5")
-        
-        self.extension = self.ia_file_name[self.ia_file_name.rindex(".") + 1:]
+
+        self.supported_extensions = supported_extensions
         self.track_num = metadata.get("track")
-        self.title = metadata.get("title").replace("/", "") if metadata.get("title") else f"Track {self.track_num}"
-        
-        self.base_name = f"{self.track_num} - {self.title}"
-        self.name = f"{self.base_name}.{self.extension}"
-        
+
     def __str__(self):
-        return f"{self.url}: {self.name}"
+        return f"{self.url}: {self.get_base_name()}"
+
+    def get_track_num(self):
+        return str(self.track_num).zfill(2) if self.track_num else self.track_num
+
+    def get_title(self):
+        return self.metadata.get("title").replace("/", "") if self.metadata.get(
+            "title") else f"Track {self.get_track_num()}"
+    
+    def get_base_name(self):
+        return f"{self.get_track_num()} - {self.get_title()}"

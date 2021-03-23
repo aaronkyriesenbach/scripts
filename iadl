@@ -37,12 +37,12 @@ def combine_list(items: list) -> str:
     return ", ".join(items) if hasattr(items, '__iter__') else items
 
 
-def download_file(file: File, output: str) -> bool:
-    print(f"Downloading {file.ia_file_name} as {file.name}")
+def download_file(file: File, ext: str, output: str) -> bool:
+    print(f"Downloading {file.ia_base_name}.{ext} as {file.get_base_name()}.{ext}")
 
     attempts = 0
     while attempts < 3:
-        with requests.get(file.url, stream=True) as dl:
+        with requests.get(f"{file.url}.{ext}", stream=True) as dl:
             if dl.status_code == 200:
                 total_size = int(dl.headers.get("content-length"))
                 with open(output, "wb") as out_file:
@@ -60,10 +60,10 @@ def download_file(file: File, output: str) -> bool:
                 else:
                     return True
             else:
-                print(f"Failed to download {file.ia_file_name} as {file.name}"
+                print(f"Failed to download {file.ia_base_name}.{ext} as {file.get_base_name()}.{ext}"
                       f"{', retrying...' if attempts < 3 else ''}")
                 attempts += 1
-    print(f"Failed to download {file.ia_file_name} as {file.name}")
+    print(f"Failed to download {file.ia_base_name}.{ext} as {file.get_base_name()}.{ext}")
     return False
 
 
@@ -110,48 +110,54 @@ if __name__ == "__main__":
     print(f"Saving to {output_dir}")
 
     all_files = page.get("files")
-    
+
+
     def get_base_names(file):
         return file[:file.rindex(".")] if "." in file else None
-    
-    base_file_names = list(set([file for file in map(get_base_names, all_files) if file is not None]))
-    base_file_names.sort()
+
+
+    base_ia_file_names = list(set([file for file in map(get_base_names, all_files) if file is not None]))
+    base_ia_file_names.sort()
 
     files = []
-    for file_name in base_file_names:
-        file = {}
-        for f in SupportedFormats:
-            full_file_name = f"{file_name}.{f.value}"
-            if full_file_name in all_files:
-                file[f] = File(base_url + full_file_name, all_files[full_file_name])
+    base_file_names = []
+    for file in base_ia_file_names:
+        supported_exts = []
+        for ext in SupportedFormats.values():
+            if f"{file}.{ext}" in all_files:
+                supported_exts.append(ext)
+        if supported_exts:
+            files.append(File(base_url + file, all_files[f"{file}.{supported_exts[0]}"], supported_exts))
+            base_file_names.append(file)
 
-        if file:
-            files.append(file)
+    for file in files:
+        if not file.track_num:
+            file.track_num = base_file_names.index(file.ia_base_name) + 1
 
     if files:
         for file in files:
-            if format in file.keys():
-                if not download_file(file.get(format), f"{output_dir}/{file.get(format).name}"):
-                    if SupportedFormats.FLAC == format and retry and SupportedFormats.MP3 in file.keys():
-                        print(f"Falling back to MP3 for file {file.get(SupportedFormats.MP3).name}")
-                        if not (download_file(file.get(SupportedFormats.MP3),
-                                              f"{output_dir}/{file.get(SupportedFormats.MP3).name}")):
+            if format.value in file.supported_extensions:
+                if not download_file(file, format.value, f"{output_dir}/{file.get_base_name()}"):
+                    if (SupportedFormats.FLAC == format and retry
+                            and SupportedFormats.MP3.value in file.supported_extensions):
+                        print(f"Falling back to MP3 for file {file.get_base_name()}")
+                        if not (download_file(file, SupportedFormats.MP3.value,
+                                              f"{output_dir}/{file.get_base_name()}")):
                             print(
-                                f"Failed to download file {file.get(SupportedFormats.MP3).name}"
-                                f" in {SupportedFormats.MP3.value}")
+                                f"Failed to download file {file.get_base_name()}"
+                                f" as {SupportedFormats.MP3.value}")
                     else:
-                        print(f"Failed to download file {file.get(format).name}")
+                        print(f"Failed to download file {file.get_base_name()}.{format.value}")
             else:
-                if retry and SupportedFormats.MP3 in file.keys():
-                    print(f"Falling back to MP3 for file {file.get(SupportedFormats.MP3).name}")
-                    if not (download_file(file.get(SupportedFormats.MP3),
-                                          f"{output_dir}/{file.get(SupportedFormats.MP3).name}")):
+                if retry and SupportedFormats.MP3.value in file.supported_extensions:
+                    print(f"Falling back to MP3 for file {file.get_base_name()}")
+                    if not (download_file(file, SupportedFormats.MP3.value,
+                                          f"{output_dir}/{file.get_base_name()}")):
                         print(
-                            f"Failed to download file {file.get(SupportedFormats.MP3).name}"
-                            f"in {SupportedFormats.MP3.value}")
+                            f"Failed to download file {file.get_base_name()}"
+                            f"as {SupportedFormats.MP3.value}")
                 else:
-                    print(f"Failed to download file {file.get(SupportedFormats.MP3).base_name}.{format.value}"
-                          f"{', no MP3 to fall back to' if SupportedFormats.MP3 not in file.keys() else ''}")
+                    print(f"Failed to download file {file.get_base_name()}.{format.value}")
     else:
         throw_with_cleanup(f"No files in {format} format found!", output_dir)
 
