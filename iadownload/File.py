@@ -11,7 +11,7 @@ class File:
         return f"{self.url}: {self.get_file_name()}"
 
     def get_track_num(self):
-        return str(self.track_num).zfill(2) if self.track_num and int(self.track_num) < 10 else self.track_num
+        return str(self.track_num).zfill(2) if self.track_num and self.track_num.isdigit() and int(self.track_num) < 10 else self.track_num.replace("/", "_")
 
     def get_title(self):
         return self.title.replace("/", "_") if self.title else f"Track {self.get_track_num()}"

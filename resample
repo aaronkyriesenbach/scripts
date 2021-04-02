@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
 import argparse
-from glob import glob, escape
 import os
+from glob import glob, escape
 from pathlib import Path
 from shutil import which
 
@@ -10,7 +10,8 @@ accepted_extensions = ["flac", "wav", "m4a"]
 target_formats = {
     # codec: extension
     "flac": "flac",
-    "alac": "m4a"
+    "alac": "m4a",
+    "mp3": "mp3"
 }
 
 
@@ -24,15 +25,16 @@ def get_command(source_file, target_codec, dest_file):
         "ffmpeg",
         "-hide_banner",
         f"-i \"{source_file}\"",
-        f"-acodec {target_codec}",
+        "-ab 320k" if target_codec == "mp3" else f"-acodec {target_codec}",
         "-vcodec copy",
         "-map_metadata 0",
-        f"-sample_fmt s16{'p' if target_codec == 'alac' else ''}",
-        "-ar 44100",
+        f"-sample_fmt s16{'p' if target_codec == 'alac' else ''}" if target_codec != "mp3" else None,
+        "-ar 44100" if target_codec != "mp3" else None,
+        "-id3v2_version 3" if target_codec == "mp3" else None,
         f"\"{dest_file}\""
     ]
 
-    return " ".join(args)
+    return " ".join(arg for arg in args if arg)
 
 
 def resample(source_file: Path, target_codec):
@@ -53,7 +55,7 @@ if __name__ == "__main__":
 
     # parser.add_argument("-i", "--input", help="designate a file or directory to resample")
     parser.add_argument("input", help="designate a file or directory to resample")
-    parser.add_argument("-f", "--format", help="designate a container/codec to resample to")
+    parser.add_argument("-f", "--format", help="designate a container/codec to resample to (default: flac)")
     parser.add_argument("-d", "--delete", help="delete source files after resampling",
                         action='store_true')
     parser.add_argument("--delete-existing", help="delete existing resampled files",
