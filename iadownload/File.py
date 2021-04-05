@@ -1,3 +1,12 @@
+def sanitize(string) -> str:
+    string = str(string)
+    for char in ['"', "*", "/", ":", "<", "?", "\\", "|"]:
+        string = string.replace(char, "_")
+    for symbol in ["-\\>", "->", "\\>", ">"]:
+        string = string.replace(symbol, "➔")
+    return string
+
+
 class File:
     def __init__(self, url, metadata):
         self.url = url
@@ -11,10 +20,11 @@ class File:
         return f"{self.url}: {self.get_file_name()}"
 
     def get_track_num(self):
-        return str(self.track_num).zfill(2) if self.track_num and str(self.track_num).isdigit() and int(self.track_num) < 10 else str(self.track_num).replace("/", "_")
+        return str(self.track_num).zfill(2) if self.track_num and str(self.track_num).isdigit() and int(
+            self.track_num) < 10 else sanitize(self.track_num)
 
     def get_title(self):
-        return self.title.replace("/", "_") if self.title else f"Track {self.get_track_num()}"
-    
+        return sanitize(self.title) if self.title else f"Track {self.get_track_num()}"
+
     def get_file_name(self):
         return f"{self.get_track_num()} - {self.get_title()}.{self.ext}"
