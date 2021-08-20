@@ -3,8 +3,8 @@
 source "$HOME/scripts/utils/ensure_installed.sh"
 source "$HOME/scripts/utils/ensure_reachable.sh"
 
-# SSH into environment and copy password to clipboard w/ lastpass-cli
-ensure_installed lpass
+# SSH into environment and copy password to clipboard w/ bitwarden-cli
+ensure_installed bw
 
 if [ "$SYSTEM_TYPE" = "Darwin" ]; then
 	ensure_installed pbcopy
@@ -16,18 +16,18 @@ fi
 
 env=$1
 
-lpass show "$env" &> /dev/null || {
-	echo "No LastPass entry for $env"
+bw get item "$env" &> /dev/null || {
+	echo "No Bitwarden entry for $env"
 	exit 1
 }
 
-url=$(lpass show --url "$env" | cut -f3 -d/)
+url=$(bw get uri "$env" | cut -f3 -d/)
 
 ensure_reachable $url
 
-user=$(lpass show --username "$env")
-password=$(lpass show --password "$env")
+user=$(bw get username "$env")
+password=$(bw get password "$env")
 
 echo "$password" | $copy_command
-echo "Copied sudo password for environment $env to clipboard"
+echo "Copied saved password for environment $env to clipboard"
 ssh "$user"@"$url"

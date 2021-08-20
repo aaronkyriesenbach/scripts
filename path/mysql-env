@@ -3,17 +3,17 @@
 source "$HOME/scripts/utils/ensure_installed.sh"
 
 # SSH into environment and copy password to clipboard w/ lastpass-cli
-ensure_installed lpass
+ensure_installed bw
 
 env=$1-mysql
 
-lpass show "$env" &> /dev/null || {
-	echo "No LastPass entry for $env"
+bw get item "$env" &> /dev/null || {
+	echo "No Bitwarden entry for $env"
 	exit 1
 }
 
-url=$(lpass show --url "$env" | cut -f3 -d/)
-user=$(lpass show --username "$env")
-password=$(lpass show --password "$env")
+url=$(bw get uri "$env" | cut -f3 -d/)
+user=$(bw get username "$env")
+password=$(bw get password "$env")
 
 mysql -h "$url" -u "$user" -p"$password"
